@@ -1,0 +1,220 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>jAnimate - jQuery custom css animations plugin</title>
+    
+    <style type="text/css">
+		.matrix {
+			-webkit-transform-origin:10px 10px;
+			-o-transform-origin:10px 10px;
+			-moz-transform-origin:10px 10px;
+			-moz-transform: matrix( 1, 0, 0, 1, 0em, 0px) rotate(20deg);
+			-webkit-transform: matrix( 1, 0, 0, 1, 0em, 0px);
+			width:200px;
+		}
+    </style>
+    
+    <script type="text/javascript" src="jquery-1.4.1.js"></script>
+    <script type="text/javascript">
+
+		jQuery(function($){
+			
+			var undefined;
+
+			function getBrowserNameFor_transform() {
+				var name, test = ['transform', 'MozTransform', 'WebkitTransform', 'OTransform', 'MSTransform', 'filter'];
+				for(var i in test ) {
+					if( document.body.style[ name = test[i] ] !== undefined ){
+						return name
+					}
+				}
+				return 'transform';
+			}
+
+			var browserNameFor_transform = getBrowserNameFor_transform();
+
+
+			
+
+			// SKEW
+			function tokenizeSkew(rule){
+			
+				tokens = rule.toString()
+					.split(/\s*/).join('')
+					.match( /skew\((-?[\d.]+)(deg|grad|rad)?,(-?[\d.]+)(deg|grad|rad)?\)/ ) || [ rule, 0, 'deg', 0, 'deg' ];
+					//        skew (    ax     deg/grad/rad  ,    ay     deg/grad/rad   )
+
+				return {
+					ax		: parseFloat( tokens[1] ) || 0,
+					ay		: parseFloat( tokens[3] ) || 0,
+					unit	: { ax: tokens[2] || 'deg', ay: tokens[4] || 'deg' }
+				};
+
+			}
+
+
+			// ORIGIN
+			function tokenizeTransformOriginRule(rule){
+
+				tokens = rule.toString()
+					.split(/left|top/).join('0')
+					.split(/center/).join('50%')
+					.split(/right|bottom/).join('100%')
+					.match( /^\s*\(?\s*(-?[\d.]+)(\%|px|em)?(\s+(-?[\d.]+)(\%|px|em)?)?\s*\)?\s*$/ );
+					//             x     %/px/em       y     %/px/em
+
+				// Default vertical position to 50% when missing:
+				//if( isNaN(tokens[4]) ){ tokens[4]=50; tokens[5]='%' }
+
+				return {
+					x		: parseFloat( tokens[1] ) || 0,
+					y		: parseFloat( tokens[4] ) || 0,
+					unit	: { x: tokens[2] || 'px', y: tokens[5] || 'px' }
+				};
+
+			}
+
+
+			// MATRIX
+			function tokenizeMatrixRule(rule){
+
+				if( rule == 'none' ){ rule = 'matrix(1,0,0,1,0,0)' }
+
+				tokens = rule
+					.split(/\s*/).join('')
+					.split(/left|top/).join('0')
+					.split(/right|bottom/).join('100%')
+					.match( /^(matrix)\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)(px|em)?,(-?[\d.]+)(px|em)?\)/ );
+					//         matrix  (  a      ,  b      ,  c      ,  d      ,  tx    px/em  ,  ty    px/em   )
+
+				console.log(rule,tokens);
+
+				return {
+					transform	: tokens[1] || '',	// 'matrix'
+					a			: parseFloat( tokens[2] ) || 0,
+					b			: parseFloat( tokens[3] ) || 0,
+					c			: parseFloat( tokens[4] ) || 0,
+					d			: parseFloat( tokens[5] ) || 0,
+					tx			: parseFloat( tokens[6] ) || 0,
+					ty			: parseFloat( tokens[8] ) || 0,
+					unit		: { tx: tokens[7] || 'px', ty: tokens[9] || 'px' }
+				};
+			
+			}
+			
+			
+			// Helper to separate multiple functions from a transform rule:
+			// (Separate where a space is followed by a function name)
+			function splitTransformRule(rule){
+				return rule.split(/\s(?=skew|rotate|scale|matrix|translate)/);
+			}
+
+
+			$.extend( $.fx.step, {
+
+				'TransformOrigin': function(fx) {
+
+					var ruleName = '-moz-transform-origin';
+
+					if( !fx.offset ){
+
+						fx.start	= tokenizeTransformOriginRule( $.curCSS(fx.elem,ruleName), fx );
+						fx.end		= tokenizeTransformOriginRule( fx.end, fx );
+						fx.unit		= fx.end.unit;
+						// Pre-calculate custom property to optimise performance:
+						fx.offset	= { x: fx.end.x - fx.start.x, y: fx.end.y - fx.start.y };
+
+					};
+
+					// Apply updated style:
+					newStyle = ( fx.start.x + fx.pos * fx.offset.x ) + fx.unit.x
+					   + ' ' + ( fx.start.y + fx.pos * fx.offset.y ) + fx.unit.y;
+					
+					//console.log(newStyle)
+					//console.log(fx)
+					
+					//$(fx.elem).css({ '-moz-transform-origin': newStyle })
+					fx.elem.style['MozTransformOrigin'] = newStyle;
+
+				},
+
+
+				'matrix': function(fx) {
+
+					if( !fx.offset ){
+
+						fx.start		= tokenizeMatrixRule( $.curCSS( fx.elem, browserNameFor_transform ) );
+						fx.end			= tokenizeMatrixRule( fx.end );
+						fx.unit			= fx.end.unit;
+						// Pre-calculate custom property to optimise performance:
+						fx.offset		= { a: fx.end.a - fx.start.a, b: fx.end.b - fx.start.b, c: fx.end.c - fx.start.c, d: fx.end.d - fx.start.d, tx: fx.end.tx - fx.start.tx, ty: fx.end.ty - fx.start.ty };
+
+					};
+
+					// Apply updated style:
+					newStyle = fx.end.transform + '('
+						+ ( fx.start.a  + fx.pos * fx.offset.a  ) + ','
+						+ ( fx.start.b  + fx.pos * fx.offset.b  ) + ','
+						+ ( fx.start.c  + fx.pos * fx.offset.c  ) + ','
+						+ ( fx.start.d  + fx.pos * fx.offset.d  ) + ','
+						+ ( fx.start.tx + fx.pos * fx.offset.tx ) + fx.unit.tx + ','
+						+ ( fx.start.ty + fx.pos * fx.offset.ty ) + fx.unit.ty + ')';
+					
+					//console.log(browserNameFor_transform,newStyle)
+					//console.log(fx)
+					
+					//$(fx.elem).css( browserNameFor_transform, newStyle )
+					fx.elem.style[browserNameFor_transform] = newStyle;	// Smoother
+
+				},
+
+
+				'skew': function(fx) {
+
+					if( !fx.offset ){
+
+						fx.start		= tokenizeSkew( $.curCSS( fx.elem, browserNameFor_transform ) );
+						fx.end			= tokenizeSkew( fx.end );
+						fx.unit			= fx.end.unit;
+						// Pre-calculate custom property to optimise performance:
+						fx.offset		= { ax: fx.end.ax - fx.start.ax, ay: fx.end.ay - fx.start.ay };
+
+					};
+
+					// Apply updated style:
+					newStyle = 'skew('
+						+ ( fx.start.ax + fx.pos * fx.offset.ax ) + fx.unit.ax + ','
+						+ ( fx.start.ay + fx.pos * fx.offset.ay ) + fx.unit.ay + ')';
+					
+					//console.log(browserNameFor_transform,newStyle)
+					//console.log(fx)
+					
+					//$(fx.elem).css( browserNameFor_transform, newStyle )
+					fx.elem.style[browserNameFor_transform] = newStyle;	// Smoother
+
+				}
+
+			});
+
+			//console.log( tokenizeTransformOriginRule('400 100') )
+
+			$('.matrix')
+				//.animate( { transform: 'matrix(1, -0.2, 0, 1, 250, 0)' }, 1000 )
+				//.animate( { transform: 'matrix(1, 0.2, 0, 1, 0, 250)' }, 1000 )
+				//.animate( { transform: 'matrix(1, -0.2, 1, 0.5, 0, 0)' }, 1000 )
+				//.animate( { transform: 'matrix(1, 0, 0, 1, 0, 0)' }, 1000 )
+				//.animate( { 'width': 400 }, 1000 )
+				//.animate( { 'TransformOrigin': '(-200 200)' }, 1000 )
+				.animate( { transform: 'skew(20deg, 10deg)' }, 1000 )
+			
+
+		});
+
+    </script>
+</head>
+<body>
+
+	<img src="sample.jpg" class="matrix" />
+
+</body>
+</html>
