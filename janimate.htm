@@ -11,252 +11,70 @@
 			x-moz-transform: matrix( 1, 0, 0, 1, 0px, 0px);
 			x-webkit-transform: matrix( 1, 0, 0, 1, 0em, 0px);
 			width:200px;
+			-moz-transform: rotate(400);
 		}
     </style>
     
     <script type="text/javascript" src="jquery/jquery-1.4.1.js"></script>
+    <script type="text/javascript" src="janimate.js"></script>
     <script type="text/javascript">
 
-		jQuery(function($){
-			
-			var undefined;
-			var clientNameFor_transform			= getClientNameFor( 'transform',       ['transform', 'MozTransform', 'WebkitTransform', 'OTransform', 'MSTransform', 'filter'] );
-			var clientNameFor_transformOrigin	= getClientNameFor( 'transformOrigin', ['transformOrigin', 'MozTransformOrigin', 'WebkitTransformOrigin', 'OTransformOrigin', 'MSTransformOrigin'] );
-			var console = window.console || { log:function(){} }
+	(function($){
 
+		$(function(){
 
-			function getClientNameFor( theDefault, candidates ) {
-				for(var i in candidates ) {
-					if( document.body.style[ candidates[i] ] !== undefined ){
-						return candidates[i]
-					}
-				}
-				return theDefault;
-			}
-
-
-
-
-			// MATRIX
-			
-			
-			// Helper to separate multiple functions from a transform rule:
-			// (Separate where a space is followed by a function name)
-			function splitTransformRule(rule){
-				return rule.split(/\s(?=skew|rotate|scale|matrix|translate)/);
-			}
-
-
-			$.extend( $.fx.step, {
-
-				'TransformOrigin': function(fx) {
-
-					function tokenizeOrigin(rule){
-
-						tokens = rule.toString()
-							.split(/left|top/).join('0')
-							.split(/center/).join('50%')
-							.split(/right|bottom/).join('100%')
-							.match( /^\s*\(\s*(-?[\d.]+)(\%|px|em)?(\s+(-?[\d.]+)(\%|px|em)?)?\s*\)\s*$/ );
-							//             x     %/px/em       y     %/px/em
-
-						// Default vertical position to 50% when missing:
-						//if( isNaN(tokens[4]) ){ tokens[4]=50; tokens[5]='%' }
-
-						return {
-							x		: parseFloat( tokens[1] ) || 0,
-							y		: parseFloat( tokens[4] ) || 0,
-							unit	: { x: tokens[2] || 'px', y: tokens[5] || 'px' }
-						};
-
-					}
-
-					if( !fx.offset ){
-
-						fx.start	= tokenizeOrigin( $.curCSS(fx.elem,ruleName), fx );
-						fx.end		= tokenizeOrigin( fx.end, fx );
-						fx.unit		= fx.end.unit;
-						// Pre-calculate custom property to optimise performance:
-						fx.offset	= { x: fx.end.x - fx.start.x, y: fx.end.y - fx.start.y };
-
-					};
-
-					// Apply updated style:
-					newStyle = ( fx.start.x + fx.pos * fx.offset.x ) + fx.unit.x
-					   + ' ' + ( fx.start.y + fx.pos * fx.offset.y ) + fx.unit.y;
-					
-					//console.log(newStyle)
-					//console.log(fx)
-					
-					//$(fx.elem).css({ '-moz-transform-origin': newStyle })
-					fx.elem.style['MozTransformOrigin'] = newStyle;
-
-				},
-
-
-				'matrix': function(fx) {
-
-					function tokenizeMatrixRule(rule){
-
-						tokens = rule.toString()
-							.split(/\s*/).join('')
-							.split(/left|top/).join('0')
-							.split(/right|bottom/).join('100%')
-							.match( /^(matrix)\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)(px|em)?,(-?[\d.]+)(px|em)?\)/ ) || [rule,'matrix',1,0,0,1,0,'px',0,'px'];
-							//         matrix  (  a      ,  b      ,  c      ,  d      ,  tx    px/em  ,  ty    px/em             )    || default
-
-						console.log(rule,tokens);
-
-						return {
-							transform	: 'matrix',
-							a			: parseFloat( tokens[2] ) || 0,
-							b			: parseFloat( tokens[3] ) || 0,
-							c			: parseFloat( tokens[4] ) || 0,
-							d			: parseFloat( tokens[5] ) || 0,
-							tx			: parseFloat( tokens[6] ) || 0,
-							ty			: parseFloat( tokens[8] ) || 0,
-							unit		: { tx: tokens[7] || 'px', ty: tokens[9] || 'px' }
-						};
-					
-					}
-
-					if( !fx.offset ){
-
-						// Ensure supplied end rule includes the matrix(...) function name:
-						fx.end = [ 'matrix(', fx.end.split(/matrix|\(|\)/).join(''), ')' ].join('');
-
-						fx.start		= tokenizeMatrixRule( $.curCSS( fx.elem, clientNameFor_transform ) );
-						fx.end			= tokenizeMatrixRule( fx.end );
-						fx.unit			= fx.end.unit;
-						// Pre-calculate custom property to optimise performance:
-						fx.offset		= { a: fx.end.a - fx.start.a, b: fx.end.b - fx.start.b, c: fx.end.c - fx.start.c, d: fx.end.d - fx.start.d, tx: fx.end.tx - fx.start.tx, ty: fx.end.ty - fx.start.ty };
-
-					};
-
-					// Apply updated style:
-					newStyle = fx.end.transform + '('
-						+ ( fx.start.a  + fx.pos * fx.offset.a  ) + ','
-						+ ( fx.start.b  + fx.pos * fx.offset.b  ) + ','
-						+ ( fx.start.c  + fx.pos * fx.offset.c  ) + ','
-						+ ( fx.start.d  + fx.pos * fx.offset.d  ) + ','
-						+ ( fx.start.tx + fx.pos * fx.offset.tx ) + fx.unit.tx + ','
-						+ ( fx.start.ty + fx.pos * fx.offset.ty ) + fx.unit.ty + ')';
-					
-					//console.log(clientNameFor_transform,newStyle)
-					//console.log(fx)
-					
-					//$(fx.elem).css( clientNameFor_transform, newStyle )
-					fx.elem.style[clientNameFor_transform] = newStyle;	// Smoother
-
-				},
-
-
-				'skew': function(fx) {
-
-					function tokenizeSkew(rule){
-
-						tokens = rule.toString()
-							.split(/\s*/).join('')
-							.match( /(skew)\((-?[\d.]+)(deg|grad|rad)?,(-?[\d.]+)(deg|grad|rad)?\)/ ) || [ rule, 'skew', 0, 'deg', 0, 'deg' ];
-							//        skew  (    ax     deg/grad/rad  ,    ay     deg/grad/rad   )   || default
-
-						return {
-							ax		: parseFloat( tokens[2] ) || 0,
-							ay		: parseFloat( tokens[4] ) || 0,
-							unit	: { ax: tokens[3] || 'deg', ay: tokens[5] || 'deg' }
-						};
-
-					}
-
-					if( !fx.offset ){
-
-						fx.start		= tokenizeSkew( $.curCSS( fx.elem, clientNameFor_transform ) );
-						fx.end			= tokenizeSkew( fx.end );
-						fx.unit			= fx.end.unit;
-						// Pre-calculate custom property to optimise performance:
-						fx.offset		= { ax: fx.end.ax - fx.start.ax, ay: fx.end.ay - fx.start.ay };
-
-					};
-
-					// Apply updated style:
-					newStyle = 'skew('
-						+ ( fx.start.ax + fx.pos * fx.offset.ax ) + fx.unit.ax + ','
-						+ ( fx.start.ay + fx.pos * fx.offset.ay ) + fx.unit.ay + ')';
-
-					//$(fx.elem).css( clientNameFor_transform, newStyle )
-					fx.elem.style[clientNameFor_transform] = newStyle;	// Smoother
-
-				},
-
-
-				'scale': function(fx) {
-
-					function tokenizeScale(rule){
-
-						tokens = rule.toString()
-							.split(/\s*/).join('')
-							.match( /(scale)\((-?[\d.]+),(-?[\d.]+)\)/ ) || [rule,'scale',0,0];
-							//        scale (     sx     ,   sy      )    || default
-console.log(rule,tokens)
-						return {
-							sx		: parseFloat( tokens[2] ) || 0,
-							sy		: parseFloat( tokens[3] ) || 0
-						};
-
-					}
-
-					if( !fx.offset ){
-console.log($.curCSS( fx.elem, clientNameFor_transform ))
-						fx.start		= tokenizeScale( $.curCSS( fx.elem, clientNameFor_transform ) );
-						fx.end			= tokenizeScale( fx.end );
-						// Pre-calculate custom property to optimise performance:
-						fx.offset		= { sx: fx.end.sx - fx.start.sx, sy: fx.end.sy - fx.start.sy };
-
-					};
-
-					// Apply updated style:
-					newStyle = 'scale('
-						+ ( fx.start.sx + fx.pos * fx.offset.sx ) + ','
-						+ ( fx.start.sy + fx.pos * fx.offset.sy ) + ')';
-console.log(clientNameFor_transform,newStyle)
-					//$(fx.elem).css( clientNameFor_transform, newStyle )
-					fx.elem.style[clientNameFor_transform] = newStyle;	// Smoother
-
-				}
-
-			});
-
-			//console.log( tokenizeTransformOriginRule('400 100') )
+		var speed = 250;
+		
+		function andAgain(){
 
 			$('.matrix')	// a & d set width and height (scale), b = skewx, c = skewy
-				//.animate( { matrix: '(0, .3, 0, 1,   0, 0)' }, 500 )
-				//.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, 500 )
+				//.animate( { matrix: '(0, .3, 0, 1,   0, 0)' }, speed )
+				//.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, speed )
 				
 				// flip using matrix
-				.animate( { matrix: '(1, 0, 0, 1, 0, 0)' }, 0 )			// reset
-				.animate( { matrix: '(0, 0.5, 0, 1, 0, 0)' }, 500 )
-				.animate( { matrix: '(-1, 0, 0, 1, 0, 0)' }, 500 )
+				//.animate( { matrix: '(1,  0,   0, 1, 0, 0)' }, 0 )			// reset
+				//.animate( { matrix: '(0,  0.3, 0, 1, 0, 0)' }, speed )
+				//.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, speed )
+				//.delay(1000)
+				//.animate( { matrix: '(0,  -0.3, 0, 1, 0, 0)' }, speed )
+				//.animate( { matrix: '(1,   0,   0, 1, 0, 0)' }, speed )
 				
 				// flip using skew and scale
-				//.animate( { matrix: '(1, 0, 0, 1, 0, 0)' }, 0 )			// reset
-				//.animate( { skew: 'skew(-45, 0)', scale: '0,1' }, 1000 )
-				.animate( { scale: 'scale(0,1)' }, 1000 )
+				//.animate( { skew: '(1,1)',  scale: '(1,1)' }, 0 )	// Required to init scale
+				//.animate( { skew: '(0,45)', scale: '(0,1)' }, speed )
+				//.animate( { skew: '(0,0)',  scale: '(-1,1)' }, speed )
 				
-				//.animate( { transform: 'matrix(1, 0.2, 0, 1, 0, 250)' }, 1000 )
-				//.animate( { transform: 'matrix(1, -0.2, 1, 0.5, 0, 0)' }, 1000 )
-				//.animate( { transform: 'matrix(1, 0, 0, 1, 0, 0)' }, 1000 )
-				//.animate( { 'width': 400 }, 1000 )
-				//.animate( { 'TransformOrigin': '(-200 200)' }, 1000 )
-				//.animate( { skew: 'skew(20deg, 10deg)' }, 1000 )
+				//.animate( { transform: 'matrix(1, 0.2, 0, 1, 0, 250)' }, speed )
+				//.animate( { transform: 'matrix(1, -0.2, 1, 0.5, 0, 0)' }, speed )
+				//.animate( { transform: 'matrix(1, 0, 0, 1, 0, 0)' }, speed )
+				//.animate( { 'width': 400 }, speed )
+				//.animate( { 'TransformOrigin': '(-200 200)' }, speed )
+				//.animate( { skew: 'skew(20deg, 10deg)' }, speed )
 			
+				//.css( 'MozTransform', 'scale(1,1)' )
+				
+				//.animate( { skew:45 }, 2000 )
+				.animate( { translate:'(50,100)' }, 2000 )
+				.animate( { rotate:3600, scale:0, skew:'(0,45)' }, 5000 )
+				//.animate( { rotate:3600, scale:'(0.5,0.5)' }, 2000 )
+
+			}
+			andAgain()
+
+			console.log( $('.matrix').css($.support.transform) )
 
 		});
+
+	})(jQuery);
 
     </script>
 </head>
 <body>
 	<br /><br />
-	<img src="images/sample.jpg" class="matrix" alt="Sample image for animation demo" />
-
+	<div>
+		<img src="images/sample.jpg" class="matrix" alt="Sample image for animation demo" />
+		<!--<select width="200px"><option>test!</option></select>
+		<input type="text" value="hello world" />-->
+	</div>
 </body>
 </html>

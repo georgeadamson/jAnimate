@@ -1,11 +1,24 @@
-jQuery plugin to allow jQuery's animate() method to animate the following css properties:
+jQuery plugin to allow jQuery's animate() method to animate the following as if they're normal css properties:
 
-- transform: matrix(a,b,c,d,tx,ty) rotate(angle) skew(ax,ay) translate(tx,ty)
+- transform: matrix(a,b,c,d,tx,ty) rotate(angle) skew(ax,ay) translate(tx,ty) scale(x,y)
 - transform-origin: x y
 - background-position: x y
 
-Based on a background-position animations plugin that I wrote a while back and finally found a use for it when I worked on the BBC Doctor Who website: See related content section at the bottom of http://www.bbc.co.uk/doctorwho/s4/episodes
+It is based on a background-position animations plugin that I wrote a while back and finally found a use for it when I worked on the BBC Doctor Who website: See related content section at the bottom of http://www.bbc.co.uk/doctorwho/s4/episodes
+
+Helpful info:
+https://developer.mozilla.org/en/CSS/-moz-transform
 
 Work in progress...
-Rotate and Skew work in FF, Opera, Chrome and Safari where supported.
-Matrix() works in FF but does not seem to have an effect in other browsers despite being supported.
+* rotate, skew, scale and translate work in FF, Opera, Chrome and Safari where supported.
+* matrix works in FF but seems to be unreliable in other browsers despite being supported.
+
+
+Here's a laxy sod's guide to the matrix() transform function:
+(So you don't have to actually understand it!)
+
+ - a and d are sort of equivalent to scale(x,y)
+ - b and c are sort of equivalent to skew(ax,ay)
+ - tx and ty are sort of equivalent to translate(tx,ty)
+
+ There, not no scary now is it?!
