@@ -1,4 +1,6 @@
-jQuery plugin to allow jQuery's animate() method to accpts the following as if they're normal css properties:
+(Work in progress)
+
+jQuery plugin to allow jQuery's animate() method to accept the following as if they're normal css properties:
 
  - rotate: "(angle)" (also accepts just angle)
  - skew: "(ax,ay)" (also accepts just ax to set both values)
@@ -10,9 +12,8 @@ jQuery plugin to allow jQuery's animate() method to accpts the following as if t
 
 Automatically decides whether to use -moz-transform or -webkit-transform etc.
 
-It is based on a background-position animations plugin that I wrote a while back and finally found a use for it when I worked on the BBC Doctor Who website: See related content section at the bottom of http://www.bbc.co.uk/doctorwho/s4/episodes
+It is based on a background-position animation plugin that I wrote a while back and finally found a use for it when I worked on the BBC Doctor Who website: See related content section at the bottom of http://www.bbc.co.uk/doctorwho/s4/episodes
 
-Work in progress...
  - rotate, skew, scale and translate work in FF, Opera, Chrome and Safari where supported.
  - matrix works in FF but seems to be unreliable in other browsers despite being supported.
 
