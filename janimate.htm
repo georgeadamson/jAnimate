@@ -4,30 +4,182 @@
     <title>jAnimate - jQuery custom css animations plugin</title>
     
     <style type="text/css">
-		.matrix {
+    
+		DIV.demo-box {
+			display:inline-block;
+			height:100px;
+			width:100px;
+		}
+    
+		IMG.demo {
+			width:100px;
+			xfilter: progid:DXImageTransform.Microsoft.Matrix();
+		}
+    
+		IMG.experiment {
 			x-webkit-transform-origin:10px 10px;
 			x-o-transform-origin:10px 10px;
 			x-moz-transform-origin:10px 10px;
 			x-moz-transform: matrix( 1, 0, 0, 1, 0px, 0px);
 			x-webkit-transform: matrix( 1, 0, 0, 1, 0em, 0px);
-			width:200px;
-			-moz-transform: rotate(400);
+			x-moz-transform: rotate(400);
+			-moz-transform: matrix( 1, 0, 0.1, 1, 0px, 0px);
 		}
+		
     </style>
     
     <script type="text/javascript" src="jquery/jquery-1.4.1.js"></script>
     <script type="text/javascript" src="janimate.js"></script>
     <script type="text/javascript">
 
-	(function($){
-
-		$(function(){
+	(function($){ $(function($){
 
 		var speed = 250;
+
+
+		// FLIP using matrix
+		$('DIV.demo-box:has(.flip)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(0,  0.4, 0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(0,  0.4, 0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(1,  0,   0, 1, 0, 0)' }, speed )
 		
+		});
+
+
+		// FLIP using skew and scale:
+		$('DIV.demo-box:has(.flip2)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { skew: '(0, 20)', scale: '( 0,1)' }, speed )
+				.animate( { skew: '(0, 0 )', scale: '(-1,1)'  }, speed )
+										   
+		},function(){					   
+										   
+			$(this).children('.demo')	   
+				.animate( { skew: '(0, 20)', scale: '(0,1)'  }, speed )
+				.animate( { skew: '(0, 0 )', scale: '(1,1)'   }, speed )
+		
+		});
+
+
+		// SKEW using matrix
+		$('DIV.demo-box:has(.skew)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(1,  0.3, 0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(1 , 0,   0, 1, 0, 0)' }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(1,  0.3, 0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(1,  0,   0, 1, 0, 0)' }, speed )
+		
+		});
+
+
+		// SKEW using skew()
+		$('DIV.demo-box:has(.skew2)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { skew: '(0, 20)' }, speed )
+				.animate( { skew: '(0, 0 )'  }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { skew: '(0, 20)' }, speed )
+				.animate( { skew: '(0, 0 )'  }, speed )
+		
+		});
+
+
+		// SCALE
+		$('DIV.demo-box:has(.scale.down)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { scale: 0 }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { scale: 1 }, speed )
+		
+		});
+
+
+		// SCALE
+		$('DIV.demo-box:has(.scale2.downup)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { scale: '( 0,1)' }, speed )
+				.animate( { scale: '(-1,1)' }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { scale: '(0,1)' }, speed )
+				.animate( { scale: '(1,1)' }, speed )
+		
+		});
+
+
+		// SCALE using matrix
+		$('DIV.demo-box:has(.scale.downup)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(0,  0,   0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { matrix: '(0,  0,   0, 1, 0, 0)' }, speed )
+				.animate( { matrix: '(1,  0,   0, 1, 0, 0)' }, speed )
+		
+		});
+
+	
+
+		// ROTATE
+		$('DIV.demo-box:has(.rotate)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { rotate: 180 }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { rotate: 0 }, speed )
+		
+		});
+
+	
+
+		// SPIN
+		$('DIV.demo-box:has(.spin)').hover(function(){
+
+			$(this).children('.demo')
+				.animate( { rotate: 180, scale: 0 }, speed )
+
+		},function(){
+
+			$(this).children('.demo')
+				.animate( { rotate: 0, scale: 1 }, speed )
+		
+		});
+
+
 		function andAgain(){
 
-			$('.matrix')	// a & d set width and height (scale), b = skewx, c = skewy
+			$('.experiment')	// a & d set width and height (scale), b = skewx, c = skewy
 				//.animate( { matrix: '(0, .3, 0, 1,   0, 0)' }, speed )
 				//.animate( { matrix: '(-1, 0,   0, 1, 0, 0)' }, speed )
 				
@@ -58,23 +210,72 @@
 				.animate( { rotate:3600, scale:0, skew:'(0,45)' }, 5000 )
 				//.animate( { rotate:3600, scale:'(0.5,0.5)' }, 2000 )
 
-			}
-			andAgain()
+		}
+		//andAgain()
 
-			console.log( $('.matrix').css($.support.transform) )
+		//console.log( $('.matrix').css($.support.transform) )
 
-		});
 
-	})(jQuery);
+	}); })(jQuery);
 
     </script>
 </head>
 <body>
-	<br /><br />
+
 	<div>
-		<img src="images/sample.jpg" class="matrix" alt="Sample image for animation demo" />
-		<!--<select width="200px"><option>test!</option></select>
-		<input type="text" value="hello world" />-->
+		<img src="images/sample.jpg" class="demo experiment" alt="Sample image for animation demo" style="filter:progid:DXImageTransform.Microsoft.matrix(M11=1, M12=0.1, M21=-0.1, M22=1, sizingMethod='auto expand')" />
 	</div>
+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo rotate" alt="Sample image for animation demo" />
+		<p>rotate</p>
+	</div>
+	+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo scale down" alt="Sample image for animation demo" />
+		<p>scale</p>
+	</div>
+	=
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo spin" alt="Sample image for animation demo" />
+		<p>spin</p>
+	</div>
+
+	<br />
+
+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo skew" alt="Sample image for animation demo" />
+		<p>skew out/in</p>
+	</div>
+	+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo scale downup" alt="Sample image for animation demo" />
+		<p>scale down/up</p>
+	</div>
+	=
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo flip" alt="Sample image for animation demo" />
+		<p>flip</p>
+	</div>
+
+	<br />
+
+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo skew2" alt="Sample image for animation demo" />
+		<p>skew out/in</p>
+	</div>
+	+
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo scale2 downup" alt="Sample image for animation demo" />
+		<p>scale down/up</p>
+	</div>
+	=
+	<div class="demo-box">
+		<img src="images/sample.jpg" class="demo flip2" alt="Sample image for animation demo" />
+		<p>flip</p>
+	</div>
+
 </body>
 </html>

@@ -22,10 +22,13 @@ Here's a laxy sod's guide to the matrix(a,b,c,d,tx,ty) transform function:
 (So you don't have to actually understand it!)
 
  - a and d are sort of equivalent to scale(x,y)
- - b and c are sort of equivalent to skew(ax,ay)
+ - b and c are sort of equivalent to skew(ax,ay) if you use values 0 to 1. Play with negative numbers such as b=0.5 and c=-0.5 then you can rotate too.
  - tx and ty are sort of equivalent to translate(tx,ty)
 
  There, not no scary now is it?!
 
 Helpful info:
 https://developer.mozilla.org/en/CSS/-moz-transform
+
+Edward Parrish has provided a handy demo page for experimenting with the Matrix Filter in IE:
+http://www.edparrish.com/cis132/09f/examples/tutorial05/demo_filter.htm

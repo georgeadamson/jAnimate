@@ -2,33 +2,33 @@
 // Note: There's something odd about the way jQuery parses the .animate(hash) which means that 
 // strings such as "10,5" are passed to our step functions as "10". No prob if they're passed as "(10,5)"
 
+// Performance tips:
+// - I've used split().join() instead of replace() because it can be faster but may not be necessary any more.
+// - Try to do as little work as possible inside the animation steps. Where appropriate I've precalculated some repetitive sums.
+
 (function($){
 	
 	var undefined;											// For faster comparison of undefined variables.
-	var console = window.console || { log:function(){} };	// Dummy to prevent my console calls from breaking in other browsers.
+	var console = window.console || { log:function(){} };	// Dummy to prevent Firebug console calls from breaking in other browsers.
 
 	// Helper for deducing which style name is supported by the browser:
 	// Returns the style name if supported or false if unsupported.
-	// TODO: Perhaps someone can suggest a more future-proof way to do this?
 	function getSupportedStyleName( candidates ) {
 		var undefined, test = document.createElement('DIV').style;
 		return $.grep( candidates, function(candidate){ return test[candidate] !== undefined } ).concat(false)[0];
 	}
 
 	// Augment the excellent jQuery.support hash with info about supported styles:
+	// TODO: Perhaps someone can suggest a more future-proof way to do this?
+	// Eg: jQuery.support.borderRadius will be 'MozBorderRadius' in Firefox 3 and false in IE6. 
 	$.extend( $.support, {
 
 		transform		: getSupportedStyleName( ['transform', 'MozTransform', 'WebkitTransform', 'OTransform', 'MSTransform', 'filter'] ),
 		transformOrigin	: getSupportedStyleName( ['transformOrigin', 'MozTransformOrigin', 'WebkitTransformOrigin', 'OTransformOrigin', 'MSTransformOrigin'] ),
 		borderRadius	: getSupportedStyleName( ['borderRadius', 'MozBorderRadius', 'WebkitBorderRadius', 'OBorderRadius', 'MSBorderRadius'] )
 
-	})
+	});
 
-
-
-	// MATRIX
-	
-	
 	// Helper to separate multiple functions from a transform rule:
 	// (Separate where a space is followed by a function name)
 	function splitTransformRule(rule){
@@ -36,9 +36,54 @@
 	}
 
 
+	// Add our custom css handlers to jQuery so that animate() method will use them: (instead of running the usual fx.step._default)
 	$.extend( $.fx.step, {
 
-		'TransformOrigin': function(fx) {
+		'backgroundPosition': function(fx) {
+
+			if( !fx.range ){
+
+				function tokenizeBackgroundPosition(rule){
+
+					tokens = rule.toString()
+						.split(/left|top/).join('0')			// Convert named values to numeric equivalents.
+						.split(/center|middle/).join('50%')		//
+						.split(/right|bottom/).join('100%')		//
+						.match( /(-?[\d.]+)(%|px|em)?(,(-?[\d.]+)(%|px|em)?)?/ ) || [ rule, 0, 'px', '', 0, 'px' ];
+						//        skew  (    ax     deg/grad/rad  ,    ay     deg/grad/rad   )   || default
+
+					return {
+						x		: parseFloat( tokens[1] ) || 0,
+						y		: parseFloat( tokens[4] ) || 0,
+						unit	: {
+									ax: tokens[2] || 'px',
+									ay: tokens[5] || 'px'
+								  }
+					};
+
+				}
+
+				fx.start	= tokenizeBackgroundPosition( $.curCSS( fx.elem, 'backgroundPosition' ) );
+				fx.end		= tokenizeBackgroundPosition( fx.end );
+				fx.unit		= fx.end.unit;
+				// Pre-calculate custom property to optimise performance:
+				fx.range	= {
+								x: fx.end.x - fx.start.x,
+								y: fx.end.y - fx.start.y
+							  };
+
+			};
+
+			// Apply updated style:
+			newStyle = ( fx.start.x + fx.pos * fx.range.x ) + fx.unit.x + ' '
+					 + ( fx.start.y + fx.pos * fx.range.y ) + fx.unit.y + ')';
+
+			fx.elem.style[$.support.transform] = newStyle;
+
+		},
+
+
+		'transformOrigin': function(fx) {
 
 			if( !fx.range ){
 
@@ -48,7 +93,7 @@
 						.split(/left|top/).join('0')
 						.split(/center/).join('50%')
 						.split(/right|bottom/).join('100%')
-						.match( /\(\s*(-?[\d.]+)(\%|px|em)?(\s+(-?[\d.]+)(\%|px|em)?)?\s*\)/ ) || [rule,'50','%','','50','%'];
+						.match( /\(\s*(-?[\d.]+)(%|px|em)?(\s+(-?[\d.]+)(%|px|em)?)?\s*\)/ ) || [rule,'50','%','','50','%'];
 						//        (       x       %/px/em    _     y       %/px/em        )    || default
 
 					// Default vertical position to 50% when missing:
@@ -57,7 +102,10 @@
 					return {
 						x		: parseFloat( tokens[1] ) || 0,
 						y		: parseFloat( tokens[4] ) || 0,
-						unit	: { x: tokens[2] || 'px', y: tokens[5] || 'px' }
+						unit	: {
+									x: tokens[2] || 'px',
+									y: tokens[5] || 'px'
+								  }
 					};
 
 				}
@@ -66,7 +114,10 @@
 				fx.end		= tokenizeOrigin( fx.end, fx );
 				fx.unit		= fx.end.unit;
 				// Pre-calculate custom property to optimise performance:
-				fx.range	= { x: fx.end.x - fx.start.x, y: fx.end.y - fx.start.y };
+				fx.range	= {
+								x: fx.end.x - fx.start.x,
+								y: fx.end.y - fx.start.y
+							  };
 
 			};
 
@@ -74,10 +125,6 @@
 			newStyle = ( fx.start.x + fx.pos * fx.range.x ) + fx.unit.x
 			   + ' ' + ( fx.start.y + fx.pos * fx.range.y ) + fx.unit.y;
 			
-			//console.log(newStyle)
-			//console.log(fx)
-			
-			//$(fx.elem).css({ '-moz-transform-origin': newStyle })
 			fx.elem.style[ $.support.transformOrigin ] = newStyle;
 
 		},
@@ -96,7 +143,7 @@
 						.match( /^(matrix)\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)(px|em)?,(-?[\d.]+)(px|em)?\)/ ) || [rule,'matrix',1,0,0,1,0,'px',0,'px'];
 						//         matrix  (  a      ,  b      ,  c      ,  d      ,  tx    px/em  ,  ty    px/em             )    || default
 
-					console.log(rule,tokens);
+					//console.log(rule,tokens);
 
 					return {
 						transform	: 'matrix',
@@ -106,7 +153,10 @@
 						d			: parseFloat( tokens[5] ) || 0,
 						tx			: parseFloat( tokens[6] ) || 0,
 						ty			: parseFloat( tokens[8] ) || 0,
-						unit		: { tx: tokens[7] || 'px', ty: tokens[9] || 'px' }
+						unit		: {
+										tx: tokens[7] || 'px',
+										ty: tokens[9] || 'px'
+									  }
 					};
 				
 				}
@@ -131,11 +181,8 @@
 				+ ( fx.start.tx + fx.pos * fx.range.tx ) + fx.unit.tx + ','
 				+ ( fx.start.ty + fx.pos * fx.range.ty ) + fx.unit.ty + ')';
 			
-			//console.log($.support.transform,newStyle)
-			//console.log(fx)
-			
-			//$(fx.elem).css( $.support.transform, newStyle )
-			fx.elem.style[ $.support.transform ] = newStyle;	// Smoother
+			// css transform may contain more than one transform function so we can't just replace it, we have to merge with it:
+			fx.elem.style[$.support.transform] = fx.elem.style[$.support.transform].split(/matrix\([^\)]*\)/).concat( newStyle ).join(' ')
 
 		},
 
@@ -154,7 +201,10 @@
 					return {
 						ax		: parseFloat( tokens[2] ) || 0,
 						ay		: parseFloat( tokens[5] ) || 0,
-						unit	: { ax: tokens[3] || 'deg', ay: tokens[6] || 'deg' }
+						unit	: {
+									ax: tokens[3] || 'deg',
+									ay: tokens[6] || 'deg'
+								  }
 					};
 
 				}
@@ -170,14 +220,41 @@
 
 			};
 
-			// Apply updated style:
-			newStyle = 'skew('
-				+ ( fx.start.ax + fx.pos * fx.range.ax ) + fx.unit.ax + ','
-				+ ( fx.start.ay + fx.pos * fx.range.ay ) + fx.unit.ay + ')';
 
-			//console.log(
-			fx.elem.style[$.support.transform] = fx.elem.style[$.support.transform].split(/skew\([^\)]*\)/).concat( newStyle ).join(' ')
-			//)
+			// In older versions of IE we use filter instead of transform:
+			if( $.support.transform == 'filter' ){
+
+				//fx.elem.style.filter = "progid:DXImageTransform.Microsoft.Matrix(newStyle)"
+				//$.each( fx.elem.filters.item, function(i,item){
+				//	//alert(item)
+				//})
+				
+				var rmatrix = /Matrix\([^)]*\)/;
+				var matrix = '';
+				var filter = style.filter || $.curCSS( elem, "filter" ) || "";
+				fx.elem.style.filter = rmatrix.test(filter) ? filter.replace(rmatrix, opacity) : opacity;
+
+
+				alert(matrix.M12)
+				
+				// Apply updated style:
+				matrix.M12 = ( fx.start.ax + fx.pos * fx.range.ax ) //+ fx.unit.ax;
+				matrix.M21 = ( fx.start.ay + fx.pos * fx.range.ay ) //+ fx.unit.ay;
+
+			// Grown-up browsers:
+			}else{
+
+				// Apply updated style:
+				newStyle = 'skew('
+					+ ( fx.start.ax + fx.pos * fx.range.ax ) + fx.unit.ax + ','
+					+ ( fx.start.ay + fx.pos * fx.range.ay ) + fx.unit.ay + ')';
+
+				//console.log(
+				// css transform may contain more than one transform function so we can't just replace it, we have to merge with it:
+				fx.elem.style[$.support.transform] = fx.elem.style[$.support.transform].split(/skew\([^\)]*\)/).concat( newStyle ).join(' ')
+				//)
+				
+			}
 		},
 
 
@@ -188,14 +265,14 @@
 				tokens = rule.toString()
 					.split(/\s*/).join('')
 					.match( /(scale)\((-?[\d.]+)(,(-?[\d.]+)\))?/ ) || [rule,'scale',1,'',1];
-					//        scale (     sx     ,   sy      )    || default
+					//        scale  (    sx     ,    sy      )     || default
 
 				var sx = parseFloat( tokens[2] )
 				var sy = parseFloat( tokens[4] )
 
 				return {
-					sx		: isNaN(sx) ? 1 : sx,
-					sy		: isNaN(sy) ? ( isNaN(sx) ? 1 : sx ) : sy
+					sx	: isNaN(sx) ? 1 : sx,
+					sy	: isNaN(sy) ? ( isNaN(sx) ? 1 : sx ) : sy
 				};
 
 			}
@@ -224,7 +301,7 @@
 			// css transform may contain more than one transform function so we can't just replace it, we have to merge with it:
 			fx.elem.style[$.support.transform] = fx.elem.style[$.support.transform].split(/scale\([^\)]*\)/).concat( newStyle ).join(' ');
 			//)
-			console.log( 'before:', before, 'after:', fx.elem.style[$.support.transform] );
+			//console.log( 'before:', before, 'after:', fx.elem.style[$.support.transform] );
 		},
 
 
@@ -241,7 +318,9 @@
 
 					return {
 						a		: parseFloat( tokens[2] ) || 0,
-						unit	: { a: parseFloat( tokens[3] ) || 'deg' }
+						unit	: {
+									a: parseFloat( tokens[3] ) || 'deg'
+								  }
 					};
 
 				}
@@ -282,7 +361,7 @@
 						.split(/\s*/).join('')
 						.match( /(translate)\((-?[\d.]+)(px|em)?(,(-?[\d.]+)(px|em)?)?\)/ ) || [rule,'translate',0,'px','',0,'px'];
 						//        translate  (   tx      px/em   ,   ty      px/em     )    || default
-console.log(rule,tokens)
+
 					return {
 						tx		: parseFloat( tokens[2] ) || 0,
 						ty		: parseFloat( tokens[5] ) || 0,
@@ -293,7 +372,7 @@ console.log(rule,tokens)
 					};
 
 				}
-console.log(fx.end)
+
 				// Ensure supplied end rule includes the rotate(...) function name:
 				fx.end = [ 'translate(', fx.end.toString().split( /translate|\(|\)/ ).join(''), ')' ].join('');
 
